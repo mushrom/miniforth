@@ -7,7 +7,12 @@ bool minift_builtin_jump_false( minift_vm_t *vm );
 
 bool minift_builtin_add( minift_vm_t *vm );
 bool minift_builtin_subtract( minift_vm_t *vm );
+bool minift_builtin_multiply( minift_vm_t *vm );
+bool minift_builtin_divide( minift_vm_t *vm );
 bool minift_builtin_less_than( minift_vm_t *vm );
+bool minift_builtin_greater_than( minift_vm_t *vm );
+bool minift_builtin_equal( minift_vm_t *vm );
+bool minift_builtin_not_equal( minift_vm_t *vm );
 
 bool minift_builtin_test( minift_vm_t *vm );
 bool minift_builtin_drop( minift_vm_t *vm );
@@ -15,23 +20,31 @@ bool minift_builtin_dup( minift_vm_t *vm );
 bool minift_builtin_display( minift_vm_t *vm );
 bool minift_builtin_newline( minift_vm_t *vm );
 
+bool minift_builtin_exit( minift_vm_t *vm );
 bool minift_builtin_print_archives( minift_vm_t *vm );
 
 static minift_archive_entry_t minift_builtins[] = {
-	{ ":",     minift_builtin_compile,    0 },
-	{ ";",     minift_builtin_return,     0 },
-	{ "jump",  minift_builtin_jump,       0 },
-	{ "jumpf", minift_builtin_jump_false, 0 },
+	{ ":",     minift_builtin_compile,      0 },
+	{ ";",     minift_builtin_return,       0 },
+	{ "jump",  minift_builtin_jump,         0 },
+	{ "jumpf", minift_builtin_jump_false,   0 },
 
-	{ "+",     minift_builtin_add,        0 },
-	{ "-",     minift_builtin_subtract,   0 },
-	{ "<",     minift_builtin_less_than,  0 },
+	{ "+",     minift_builtin_add,          0 },
+	{ "-",     minift_builtin_subtract,     0 },
+	{ "*",     minift_builtin_multiply,     0 },
+	{ "/",     minift_builtin_divide,       0 },
+	{ "<",     minift_builtin_less_than,    0 },
+	{ ">",     minift_builtin_greater_than, 0 },
+	{ "=",     minift_builtin_equal,        0 },
+	{ "!=",    minift_builtin_not_equal,        0 },
 
-	{ "drop",  minift_builtin_drop,       0 },
-	{ "dup",   minift_builtin_dup,        0 },
-	{ "test",  minift_builtin_test,       0 },
-	{ ".",     minift_builtin_display,    0 },
-	{ "cr",    minift_builtin_newline,    0 },
+	{ "drop",  minift_builtin_drop,         0 },
+	{ "dup",   minift_builtin_dup,          0 },
+	{ "test",  minift_builtin_test,         0 },
+	{ ".",     minift_builtin_display,      0 },
+	{ "cr",    minift_builtin_newline,      0 },
+
+	{ "exit",  minift_builtin_exit,         0 },
 
 	{ "print-archives", minift_builtin_print_archives, 0 },
 };
@@ -100,6 +113,29 @@ bool minift_builtin_add( minift_vm_t *vm ){
 }
 
 bool minift_builtin_subtract( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b - a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+bool minift_builtin_multiply( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b * a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+bool minift_builtin_divide( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b / a, MINIFT_TYPE_INT ));
+
 	return true;
 }
 
@@ -112,6 +148,33 @@ bool minift_builtin_less_than( minift_vm_t *vm ){
 	return true;
 }
 
+bool minift_builtin_greater_than( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b > a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+bool minift_builtin_equal( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b == a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+bool minift_builtin_not_equal( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->data_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->data_stack ));
+
+	minift_push( vm, &vm->data_stack, minift_tag( b != a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
 bool minift_builtin_test( minift_vm_t *vm ){
 	minift_puts( "testing" );
 
@@ -119,6 +182,8 @@ bool minift_builtin_test( minift_vm_t *vm ){
 }
 
 bool minift_builtin_drop( minift_vm_t *vm ){
+	minift_pop( vm, &vm->data_stack );
+
 	return true;
 }
 
@@ -150,6 +215,12 @@ bool minift_builtin_newline( minift_vm_t *vm ){
 	minift_put_char( '\n' );
 
 	return true;
+}
+
+bool minift_builtin_exit( minift_vm_t *vm ){
+	vm->running = false;
+
+	return false;
 }
 
 bool minift_builtin_print_archives( minift_vm_t *vm ){
