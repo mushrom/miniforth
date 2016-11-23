@@ -1,61 +1,44 @@
 #include <miniforth/miniforth.h>
+#include <miniforth/util.h>
 
-static inline bool is_whitespace( char c ){
-	const char *s = " \t\n\v";
-
-	for ( unsigned i = 0; s[i]; i++ ){
-		if ( c == s[i] ){
-			return true;
-		}
-	}
-	
-	return false;
-}
-
-static inline bool is_number( char c ){
-	return (c >= '0' && c <= '9');
-}
-
-static inline bool is_character( char c ){
-	return (c >= 'A' && c <= 'Z')
-	    || (c >= 'a' && c <= 'z');
-}
-
-void minift_puts( const char *s ){
-	for ( unsigned i = 0; s[i]; i++ ){
-		minift_put_char( s[i] );
-	}
-}
-
-static inline int minift_atoi( const char *s ){
-	int ret = 0;
-
-	for ( unsigned i = 0; s[i]; s++ ){
-		ret *= 10;
-		ret += s[i] - '0';
-	}
-
-	return ret;
-}
-
-unsigned long minift_read_token( void ){
-	char buf[MINIFT_MAX_WORDSIZE];
-
-	unsigned long ret = 0;
+char minift_skip_shitespace( void ){
 	char c = 0;
-	unsigned i = 0;
+	bool in_comment = false;
 
-	minift_puts( "\rminiforth > " );
-	while ( is_whitespace(( c = minift_get_char( ))));
+	c = minift_get_char( );
+	in_comment = c == '(';
+
+	while ( is_whitespace(c) || in_comment ){
+		if ( c == '(' ) in_comment = true;
+		if ( c == ')' ) in_comment = false;
+
+		c = minift_get_char( );
+	}
+
+	return c;
+}
+
+void minift_read_buffer( char *buf, char first ){
+	unsigned i = 0;
+	char c = first;
 
 	for ( i = 0;
 	      !is_whitespace(c) && i < MINIFT_MAX_WORDSIZE - 1;
 	      i++, c = minift_get_char( ))
 	{
-		buf[i] = c;
+		buf[i] = minift_lowercase( c );
 	}
 
 	buf[i] = '\0';
+}
+
+unsigned long minift_read_token( void ){
+	char buf[MINIFT_MAX_WORDSIZE];
+
+	char c = minift_skip_shitespace( );
+	minift_read_buffer( buf, c );
+
+	unsigned long ret = 0;
 
 	if ( is_number( buf[0] )){
 		// convert to number
