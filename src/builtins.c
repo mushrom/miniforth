@@ -20,6 +20,9 @@ bool minift_builtin_dup( minift_vm_t *vm );
 bool minift_builtin_display( minift_vm_t *vm );
 bool minift_builtin_newline( minift_vm_t *vm );
 
+bool minift_builtin_value( minift_vm_t *vm );
+bool minift_builtin_value_set( minift_vm_t *vm );
+
 bool minift_builtin_exit( minift_vm_t *vm );
 bool minift_builtin_print_archives( minift_vm_t *vm );
 
@@ -36,7 +39,7 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ "<",     minift_builtin_less_than,    0 },
 	{ ">",     minift_builtin_greater_than, 0 },
 	{ "=",     minift_builtin_equal,        0 },
-	{ "!=",    minift_builtin_not_equal,        0 },
+	{ "!=",    minift_builtin_not_equal,    0 },
 
 	{ "drop",  minift_builtin_drop,         0 },
 	{ "dup",   minift_builtin_dup,          0 },
@@ -44,8 +47,10 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ ".",     minift_builtin_display,      0 },
 	{ "cr",    minift_builtin_newline,      0 },
 
-	{ "exit",  minift_builtin_exit,         0 },
+	{ "value", minift_builtin_value,        0 },
+	{ "to",    minift_builtin_value_set,    0 },
 
+	{ "exit",  minift_builtin_exit,         0 },
 	{ "print-archives", minift_builtin_print_archives, 0 },
 };
 
@@ -215,6 +220,57 @@ bool minift_builtin_newline( minift_vm_t *vm ){
 	minift_put_char( '\n' );
 
 	return true;
+}
+
+bool minift_builtin_value( minift_vm_t *vm ){
+	unsigned long word  = minift_read_token( );
+	unsigned long value = minift_pop( vm, &vm->data_stack );
+
+	if ( minift_is_type( word, MINIFT_TYPE_WORD )){
+		minift_define_t *def = minift_make_variable( vm, word );
+
+		if ( !def ){
+			return false;
+		}
+
+		unsigned long *data = minift_define_data( def );
+		*data = value;
+	}
+
+	return true;
+}
+
+bool minift_builtin_value_set( minift_vm_t *vm ){
+	unsigned long word = 0;
+	unsigned long value = minift_pop( vm, &vm->data_stack );
+	bool inc_ip = true;
+
+	if ( vm->ip ){
+		word = *(vm->ip + 1);
+		vm->ip += 2;
+		inc_ip = false;
+
+	} else {
+		word = minift_read_token( );
+	}
+
+	if ( minift_is_type( word, MINIFT_TYPE_LITERAL_WORD )){
+		word = minift_untag( word );
+		word = minift_tag( word, MINIFT_TYPE_WORD );
+	}
+
+	if ( minift_is_type( word, MINIFT_TYPE_WORD )){
+		minift_define_t *def = minift_define_lookup( vm, word );
+
+		if ( !def ){
+			return false;
+		}
+
+		unsigned long *data = minift_define_data( def );
+		*data = value;
+	}
+
+	return inc_ip;
 }
 
 bool minift_builtin_exit( minift_vm_t *vm ){

@@ -227,6 +227,7 @@ void minift_compile( minift_vm_t *vm ){
 	unsigned long then_word   = make_hash( "then" );
 	unsigned long jump_word   = make_hash( "jump" );
 	unsigned long jump_f_word = make_hash( "jumpf" );
+	unsigned long to_word     = make_hash( "to" );
 	unsigned long word = 0;
 
 	minift_define_t *def = alloc_definition( vm );
@@ -289,6 +290,14 @@ void minift_compile( minift_vm_t *vm ){
 
 			*for_ref = (unsigned long)vm->data_stack.ptr;
 
+		} else if ( word == to_word ){
+			word = minift_read_token( );
+			word = minift_untag( word );
+			word = minift_tag( word, MINIFT_TYPE_LITERAL_WORD );
+
+			minift_push( vm, &vm->data_stack, to_word );
+			minift_push( vm, &vm->data_stack, word );
+
 		} else {
 			minift_push( vm, &vm->data_stack, word );
 		}
@@ -298,6 +307,35 @@ void minift_compile( minift_vm_t *vm ){
 
 	// push remaining ";" word
 	minift_push( vm, &vm->data_stack, word );
+}
+
+minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word ){
+	minift_define_t *def   = alloc_definition( vm );
+	unsigned long end_comp = make_hash( ";" );
+
+	if ( !def ){
+		minift_fatal_error( vm, "out of stack space" );
+		return NULL;
+	}
+
+	def->hash     = word;
+	def->previous = vm->definitions;
+
+	if ( !minift_is_type( def->hash, MINIFT_TYPE_WORD )){
+		minift_fatal_error( vm, "expected a word in definition" );
+		return NULL;
+	}
+
+	vm->definitions = def;
+
+	minift_push( vm, &vm->data_stack, 0 );
+	minift_push( vm, &vm->data_stack, end_comp );
+
+	return def;
+}
+
+unsigned long *minift_define_data( minift_define_t *define ){
+	return (void *)((uint8_t *)define + sizeof(minift_define_t));
 }
 
 minift_define_t *minift_define_lookup( minift_vm_t *vm, unsigned long hash ){

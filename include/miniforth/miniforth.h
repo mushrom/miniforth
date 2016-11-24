@@ -7,8 +7,10 @@
 #define NULL ((void *)0)
 
 enum {
-	MINIFT_TYPE_INT,
-	MINIFT_TYPE_WORD,
+	MINIFT_TYPE_INT          = 0,
+	MINIFT_TYPE_WORD         = 1,
+	MINIFT_TYPE_ADDR         = 2,
+	MINIFT_TYPE_LITERAL_WORD = 3,
 
 	MINIFT_TYPE_SHIFT = 2,
 	MINIFT_TYPE_MASK  = (1 << MINIFT_TYPE_SHIFT) - 1,
@@ -69,6 +71,8 @@ void minift_fatal_error( minift_vm_t *vm, char *msg );
 bool minift_exec_word( minift_vm_t *vm, unsigned long word );
 unsigned long minift_read_token( void );
 void minift_compile( minift_vm_t *vm );
+minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word );
+unsigned long *minift_define_data( minift_define_t *define );
 
 minift_define_t *minift_define_lookup( minift_vm_t *vm, unsigned long hash );
 
