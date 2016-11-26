@@ -13,6 +13,7 @@ void minift_put_char( char c ){
 int main( int argc, char *argv[] ){
 	unsigned long data[1024];
 	unsigned long calls[1024];
+	unsigned long params[1024];
 
 	minift_vm_t foo;
 	minift_stack_t data_stack = {
@@ -27,7 +28,13 @@ int main( int argc, char *argv[] ){
 		.ptr   = calls,
 	};
 
-	minift_init_vm( &foo, &call_stack, &data_stack, NULL );
+	minift_stack_t param_stack = {
+		.start = params,
+		.end   = params + 1024,
+		.ptr   = params,
+	};
+
+	minift_init_vm( &foo, &call_stack, &data_stack, &param_stack, NULL );
 	minift_run( &foo );
 
 	return 0;

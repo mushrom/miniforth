@@ -52,6 +52,7 @@ typedef struct minift_define {
 typedef struct minift_vm {
 	minift_stack_t    data_stack;
 	minift_stack_t    call_stack;
+	minift_stack_t    param_stack;
 	unsigned long    *ip;
 	minift_archive_t *archives;
 	minift_define_t  *definitions;
@@ -63,6 +64,7 @@ typedef struct minift_vm {
 minift_vm_t *minift_init_vm( minift_vm_t *vm,
                              minift_stack_t *calls,
                              minift_stack_t *data,
+                             minift_stack_t *params,
                              unsigned long  *ip );
 
 void minift_step( minift_vm_t *vm );

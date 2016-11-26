@@ -57,11 +57,13 @@ unsigned long minift_read_token( void ){
 minift_vm_t *minift_init_vm( minift_vm_t *vm,
                              minift_stack_t *calls,
                              minift_stack_t *data,
+                             minift_stack_t *params,
                              unsigned long  *ip )
 {
 	vm->ip = ip;
 	vm->call_stack  = *calls;
 	vm->data_stack  = *data;
+	vm->param_stack = *params;
 	vm->running     = false;
 	vm->definitions = NULL;
 
@@ -101,7 +103,7 @@ void minift_step( minift_vm_t *vm ){
 		ret = minift_exec_word( vm, token );
 
 	} else if ( minift_is_type( token, MINIFT_TYPE_INT )){
-		minift_push( vm, &vm->data_stack, token );
+		minift_push( vm, &vm->param_stack, token );
 		ret = true;
 	}
 
