@@ -1,5 +1,10 @@
 #include <miniforth/miniforth.h>
 #include <miniforth/util.h>
+#include <stdint.h>
+
+static inline unsigned long make_hash( char *str ){
+	return minift_tag( minift_hash( str ), MINIFT_TYPE_WORD );
+}
 
 char minift_skip_shitespace( void ){
 	char c = 0;
@@ -32,10 +37,65 @@ void minift_read_buffer( char *buf, char first ){
 	buf[i] = '\0';
 }
 
-unsigned long minift_read_token( void ){
-	char buf[MINIFT_MAX_WORDSIZE];
+static inline unsigned bytes_to_cells( unsigned bytes ){
+	unsigned cell_size = sizeof(unsigned long);
+	unsigned mod = (bytes % cell_size);
 
+	return bytes - (bytes % cell_size) + (!!mod * cell_size);
+}
+
+unsigned long minift_read_string( minift_vm_t *vm ){
+	// XXX: when in compilation mode, both the word list and the string
+	//      will be allocated on top of the same stack, which results
+	//      in erroneous compiled word lists, so a 'jump' word is inserted
+	//      before the string which jumps to the word after the newly-allocated
+	//      string to prevent this.
+	//
+	// TODO: think of a better way to handle this
+	unsigned long *forward_jump = NULL;
+
+	if ( vm->compiling ){
+		minift_push( vm, &vm->data_stack, make_hash( "jump" ));
+		forward_jump = vm->data_stack.ptr;
+		minift_push( vm, &vm->data_stack, 0 );
+	}
+
+	char *ptr = (char *)vm->data_stack.ptr;
+	char *str = ptr;
+	char *end = (char *)vm->data_stack.end;
+	unsigned size = 1;
+	char c;
+
+	// TODO: handle escaped doublequotes in strings
+	while (( c = minift_get_char( )) != '"' ){
+		size++;
+		*ptr++ = c;
+
+		if ( ptr >= end ){
+			minift_fatal_error( vm, "out of data stack" );
+		}
+	}
+
+	*ptr = '\0';
+
+	// add size of string to data stack, while keeping it aligned
+	vm->data_stack.ptr += bytes_to_cells( size );
+
+	if ( vm->compiling ){
+		*forward_jump = (unsigned long)vm->data_stack.ptr;
+	}
+
+	return minift_tag( (uintptr_t)str, MINIFT_TYPE_ADDR );
+}
+
+unsigned long minift_read_token( minift_vm_t *vm ){
+	char buf[MINIFT_MAX_WORDSIZE];
 	char c = minift_skip_shitespace( );
+
+	if ( c == '"' ){
+		return minift_read_string( vm );
+	}
+
 	minift_read_buffer( buf, c );
 
 	unsigned long ret = 0;
@@ -65,6 +125,7 @@ minift_vm_t *minift_init_vm( minift_vm_t *vm,
 	vm->data_stack  = *data;
 	vm->param_stack = *params;
 	vm->running     = false;
+	vm->compiling   = false;
 	vm->definitions = NULL;
 
 	minift_archive_init_base( vm );
@@ -96,13 +157,13 @@ bool minift_exec_word( minift_vm_t *vm, unsigned long word ){
 #include <stdio.h>
 
 void minift_step( minift_vm_t *vm ){
-	unsigned long token = vm->ip? *vm->ip : minift_read_token( );
+	unsigned long token = vm->ip? *vm->ip : minift_read_token( vm );
 	bool ret = false;
 
 	if ( minift_is_type( token, MINIFT_TYPE_WORD )){
 		ret = minift_exec_word( vm, token );
 
-	} else if ( minift_is_type( token, MINIFT_TYPE_INT )){
+	} else {
 		minift_push( vm, &vm->param_stack, token );
 		ret = true;
 	}
@@ -199,10 +260,6 @@ unsigned long minift_peek( minift_vm_t *vm, minift_stack_t *stack ){
 	return 0;
 }
 
-static inline unsigned long make_hash( char *str ){
-	return minift_tag( minift_hash( str ), MINIFT_TYPE_WORD );
-}
-
 static inline minift_define_t *alloc_definition( minift_vm_t *vm ){
 	minift_define_t *ret = (void *)vm->data_stack.ptr;
 
@@ -232,6 +289,8 @@ void minift_compile( minift_vm_t *vm ){
 	unsigned long to_word     = make_hash( "to" );
 	unsigned long word = 0;
 
+	vm->compiling = true;
+
 	minift_define_t *def = alloc_definition( vm );
 
 	if ( !def ){
@@ -239,7 +298,7 @@ void minift_compile( minift_vm_t *vm ){
 		return;
 	}
 
-	def->hash     = minift_read_token( );
+	def->hash     = minift_read_token( vm );
 	def->previous = vm->definitions;
 
 	if ( !minift_is_type( def->hash, MINIFT_TYPE_WORD )){
@@ -249,7 +308,7 @@ void minift_compile( minift_vm_t *vm ){
 
 	vm->definitions = def;
 
-	word = minift_read_token( );
+	word = minift_read_token( vm );
 
 	unsigned long *forward[8];
 	unsigned long *backward[8];
@@ -293,7 +352,7 @@ void minift_compile( minift_vm_t *vm ){
 			*for_ref = (unsigned long)vm->data_stack.ptr;
 
 		} else if ( word == to_word ){
-			word = minift_read_token( );
+			word = minift_read_token( vm );
 			word = minift_untag( word );
 			word = minift_tag( word, MINIFT_TYPE_LITERAL_WORD );
 
@@ -304,11 +363,13 @@ void minift_compile( minift_vm_t *vm ){
 			minift_push( vm, &vm->data_stack, word );
 		}
 
-		word = minift_read_token( );
+		word = minift_read_token( vm );
 	}
 
 	// push remaining ";" word
 	minift_push( vm, &vm->data_stack, word );
+
+	vm->compiling = false;
 }
 
 minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word ){

@@ -9,10 +9,15 @@ bool minift_builtin_add( minift_vm_t *vm );
 bool minift_builtin_subtract( minift_vm_t *vm );
 bool minift_builtin_multiply( minift_vm_t *vm );
 bool minift_builtin_divide( minift_vm_t *vm );
+bool minift_builtin_modulo( minift_vm_t *vm );
 bool minift_builtin_less_than( minift_vm_t *vm );
 bool minift_builtin_greater_than( minift_vm_t *vm );
 bool minift_builtin_equal( minift_vm_t *vm );
 bool minift_builtin_not_equal( minift_vm_t *vm );
+
+bool minift_builtin_char_at( minift_vm_t *vm );
+bool minift_builtin_char_set( minift_vm_t *vm );
+bool minift_builtin_display_char( minift_vm_t *vm );
 
 bool minift_builtin_test( minift_vm_t *vm );
 bool minift_builtin_drop( minift_vm_t *vm );
@@ -36,10 +41,15 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ "-",     minift_builtin_subtract,     0 },
 	{ "*",     minift_builtin_multiply,     0 },
 	{ "/",     minift_builtin_divide,       0 },
+	{ "mod",   minift_builtin_modulo,       0 },
 	{ "<",     minift_builtin_less_than,    0 },
 	{ ">",     minift_builtin_greater_than, 0 },
 	{ "=",     minift_builtin_equal,        0 },
 	{ "!=",    minift_builtin_not_equal,    0 },
+
+	{ "c@",    minift_builtin_char_at,      0 },
+	{ "c!",    minift_builtin_char_set,     0 },
+	{ "emit",  minift_builtin_display_char, 0 },
 
 	{ "drop",  minift_builtin_drop,         0 },
 	{ "dup",   minift_builtin_dup,          0 },
@@ -109,10 +119,20 @@ bool minift_builtin_jump_false( minift_vm_t *vm ){
 }
 
 bool minift_builtin_add( minift_vm_t *vm ){
-	unsigned long a = minift_untag( minift_pop( vm, &vm->param_stack ));
-	unsigned long b = minift_untag( minift_pop( vm, &vm->param_stack ));
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+	unsigned tag;
 
-	minift_push( vm, &vm->param_stack, minift_tag( a + b, MINIFT_TYPE_INT ));
+	if ( minift_get_tag(a) > minift_get_tag(b) ){
+		tag = minift_get_tag( a );
+	} else {
+		tag = minift_get_tag( b );
+	}
+
+	a = minift_untag( a );
+	b = minift_untag( b );
+
+	minift_push( vm, &vm->param_stack, minift_tag( a + b, tag ));
 
 	return true;
 }
@@ -140,6 +160,16 @@ bool minift_builtin_divide( minift_vm_t *vm ){
 	unsigned long b = minift_untag( minift_pop( vm, &vm->param_stack ));
 
 	minift_push( vm, &vm->param_stack, minift_tag( b / a, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+#include <stdio.h>
+bool minift_builtin_modulo( minift_vm_t *vm ){
+	unsigned long a = minift_untag( minift_pop( vm, &vm->param_stack ));
+	unsigned long b = minift_untag( minift_pop( vm, &vm->param_stack ));
+
+	minift_push( vm, &vm->param_stack, minift_tag( b % a, MINIFT_TYPE_INT ));
 
 	return true;
 }
@@ -177,6 +207,31 @@ bool minift_builtin_not_equal( minift_vm_t *vm ){
 
 	minift_push( vm, &vm->param_stack, minift_tag( b != a, MINIFT_TYPE_INT ));
 
+	return true;
+}
+
+bool minift_builtin_char_at( minift_vm_t *vm ){
+	unsigned long addr = minift_pop( vm, &vm->param_stack );
+
+	if ( !minift_is_type( addr, MINIFT_TYPE_ADDR )){
+		minift_fatal_error( vm, "expected address, but have something else" );
+		return false;
+	}
+
+	char c = *(char *)minift_untag( addr );
+
+	minift_push( vm, &vm->param_stack, minift_tag( c, MINIFT_TYPE_INT ));
+	return true;
+}
+
+bool minift_builtin_char_set( minift_vm_t *vm ){
+	return true;
+}
+
+bool minift_builtin_display_char( minift_vm_t *vm ){
+	unsigned long c = minift_untag( minift_pop( vm, &vm->param_stack ));
+
+	minift_put_char( c );
 	return true;
 }
 
@@ -223,7 +278,7 @@ bool minift_builtin_newline( minift_vm_t *vm ){
 }
 
 bool minift_builtin_value( minift_vm_t *vm ){
-	unsigned long word  = minift_read_token( );
+	unsigned long word  = minift_read_token( vm );
 	unsigned long value = minift_pop( vm, &vm->param_stack );
 
 	if ( minift_is_type( word, MINIFT_TYPE_WORD )){
@@ -251,7 +306,7 @@ bool minift_builtin_value_set( minift_vm_t *vm ){
 		inc_ip = false;
 
 	} else {
-		word = minift_read_token( );
+		word = minift_read_token( vm );
 	}
 
 	if ( minift_is_type( word, MINIFT_TYPE_LITERAL_WORD )){

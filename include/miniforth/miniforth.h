@@ -58,6 +58,7 @@ typedef struct minift_vm {
 	minift_define_t  *definitions;
 
 	bool              running;
+	bool              compiling;
 	minift_archive_t  base_archive;
 } minift_vm_t;
 
@@ -71,7 +72,7 @@ void minift_step( minift_vm_t *vm );
 void minift_run( minift_vm_t *vm );
 void minift_fatal_error( minift_vm_t *vm, char *msg );
 bool minift_exec_word( minift_vm_t *vm, unsigned long word );
-unsigned long minift_read_token( void );
+unsigned long minift_read_token( minift_vm_t *vm );
 void minift_compile( minift_vm_t *vm );
 minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word );
 unsigned long *minift_define_data( minift_define_t *define );
@@ -92,6 +93,10 @@ static inline unsigned long minift_tag( unsigned long data, unsigned tag ){
 
 static inline unsigned long minift_untag( unsigned long data ){
 	return data >> MINIFT_TYPE_SHIFT;
+}
+
+static inline unsigned long minift_get_tag( unsigned long data ){
+	return data & MINIFT_TYPE_MASK;
 }
 
 static inline bool minift_is_type( unsigned long data, unsigned tag ){
