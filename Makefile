@@ -1,9 +1,9 @@
-INCLUDE = -Iinclude/
-CFLAGS  = -Os $(INCLUDE) -Wall -std=c11
-LIBSRC  = $(wildcard src/*.c)
-STUBSRC = $(wildcard stubs/$(STUBS)/*.c)
-LIBOBJ  = $(LIBSRC:.c=.o)
-STUBOBJ = $(STUBSRC:.c=.o)
+INCLUDE  = -Iinclude/
+CFLAGS  += -Os $(INCLUDE) -Wall -std=c11
+LIBSRC   = $(wildcard src/*.c)
+STUBSRC  = $(wildcard stubs/$(STUBS)/*.c)
+LIBOBJ   = $(LIBSRC:.c=.o)
+STUBOBJ  = $(STUBSRC:.c=.o)
 
 .PHONY: all
 all: out/miniforth

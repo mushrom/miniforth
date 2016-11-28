@@ -127,6 +127,7 @@ minift_vm_t *minift_init_vm( minift_vm_t *vm,
 	vm->running     = false;
 	vm->compiling   = false;
 	vm->definitions = NULL;
+	vm->archives    = NULL;
 
 	minift_archive_init_base( vm );
 	minift_archive_add( vm, &vm->base_archive );
