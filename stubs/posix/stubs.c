@@ -1,9 +1,21 @@
 #include <miniforth/stubs.h>
 #include <miniforth/miniforth.h>
 #include <stdio.h>
+#include <unistd.h>
+
+static char input_buffer[256];
+static char *cur_input = NULL;
 
 char minift_get_char( void ){
-	return getchar( );
+	while ( !cur_input || !*cur_input ){
+		if ( isatty( 0 )){
+			printf( "miniforth > " );
+		}
+
+		cur_input = fgets( input_buffer, sizeof(input_buffer), stdin );
+	}
+
+	return *cur_input++;
 }
 
 void minift_put_char( char c ){

@@ -1,5 +1,5 @@
 INCLUDE = -Iinclude/
-CFLAGS  = -O2 $(INCLUDE) -Wall -std=c11
+CFLAGS  = -Os $(INCLUDE) -Wall -std=c11
 LIBSRC  = $(wildcard src/*.c)
 STUBSRC = $(wildcard stubs/$(STUBS)/*.c)
 LIBOBJ  = $(LIBSRC:.c=.o)
