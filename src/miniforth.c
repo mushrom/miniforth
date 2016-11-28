@@ -154,8 +154,6 @@ bool minift_exec_word( minift_vm_t *vm, unsigned long word ){
 	return false;
 }
 
-#include <stdio.h>
-
 void minift_step( minift_vm_t *vm ){
 	unsigned long token = vm->ip? *vm->ip : minift_read_token( vm );
 	bool ret = false;

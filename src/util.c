@@ -46,3 +46,41 @@ char minift_lowercase( char c ){
 
 	return c;
 }
+
+void minift_print_int( unsigned long n ){
+	char buf[32];
+	unsigned i = 0;
+
+	if ( n == 0 ){
+		minift_put_char( '0' );
+		return;
+	}
+
+	for ( ; n; n /= 10, i++ ){
+		buf[i] = (n % 10) + '0';
+	}
+
+	while ( i ){
+		minift_put_char( buf[--i] );
+	}
+}
+
+const char *hex_table = "0123456789abcdef";
+
+void minift_print_hex( unsigned long n ){
+	char buf[32];
+	unsigned i = 0;
+
+	if ( n == 0 ){
+		minift_put_char( '0' );
+		return;
+	}
+
+	for ( ; n; n /= 10, i++ ){
+		buf[i] = hex_table[n % 16];
+	}
+
+	while ( i ){
+		minift_put_char( buf[--i] );
+	}
+}

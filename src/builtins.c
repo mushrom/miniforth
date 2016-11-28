@@ -1,4 +1,5 @@
 #include <miniforth/miniforth.h>
+#include <miniforth/util.h>
 
 bool minift_builtin_compile( minift_vm_t *vm );
 bool minift_builtin_return( minift_vm_t *vm );
@@ -164,7 +165,6 @@ bool minift_builtin_divide( minift_vm_t *vm ){
 	return true;
 }
 
-#include <stdio.h>
 bool minift_builtin_modulo( minift_vm_t *vm ){
 	unsigned long a = minift_untag( minift_pop( vm, &vm->param_stack ));
 	unsigned long b = minift_untag( minift_pop( vm, &vm->param_stack ));
@@ -253,19 +253,26 @@ bool minift_builtin_dup( minift_vm_t *vm ){
 	return true;
 }
 
-#include <stdio.h>
-
 bool minift_builtin_display( minift_vm_t *vm ){
 	unsigned long token = minift_peek( vm, &vm->param_stack );
 
 	if ( minift_is_type( token, MINIFT_TYPE_INT )){
-		printf( "%lu", token >> MINIFT_TYPE_SHIFT );
+		minift_print_int( minift_untag( token ));
 
 	} else if ( minift_is_type( token, MINIFT_TYPE_WORD )){
-		printf( "#<word 0x%016lx>", token >> MINIFT_TYPE_SHIFT );
+		minift_puts( "#<word 0x" );
+		minift_print_hex( token );
+		minift_puts( ">" );
+
+	} else if ( minift_is_type( token, MINIFT_TYPE_ADDR )){
+		minift_puts( "#<address 0x" );
+		minift_print_hex( minift_untag( token ));
+		minift_puts( ">" );
 
 	} else {
-		printf( "#<unknown token 0x%lx>", token );
+		minift_puts( "#<unknown token 0x" );
+		minift_print_hex( token );
+		minift_puts( ">" );
 	}
 
 	return true;
