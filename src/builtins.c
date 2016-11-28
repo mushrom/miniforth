@@ -29,39 +29,51 @@ bool minift_builtin_newline( minift_vm_t *vm );
 bool minift_builtin_value( minift_vm_t *vm );
 bool minift_builtin_value_set( minift_vm_t *vm );
 
+bool minift_builtin_cells( minift_vm_t *vm );
+bool minift_builtin_create( minift_vm_t *vm );
+bool minift_builtin_allot( minift_vm_t *vm );
+bool minift_builtin_fetch( minift_vm_t *vm );
+bool minift_builtin_store( minift_vm_t *vm );
+
 bool minift_builtin_exit( minift_vm_t *vm );
 bool minift_builtin_print_archives( minift_vm_t *vm );
 
 static minift_archive_entry_t minift_builtins[] = {
-	{ ":",     minift_builtin_compile,      0 },
-	{ ";",     minift_builtin_return,       0 },
-	{ "jump",  minift_builtin_jump,         0 },
-	{ "jumpf", minift_builtin_jump_false,   0 },
+	{ ":",      minift_builtin_compile,      0 },
+	{ ";",      minift_builtin_return,       0 },
+	{ "jump",   minift_builtin_jump,         0 },
+	{ "jumpf",  minift_builtin_jump_false,   0 },
 
-	{ "+",     minift_builtin_add,          0 },
-	{ "-",     minift_builtin_subtract,     0 },
-	{ "*",     minift_builtin_multiply,     0 },
-	{ "/",     minift_builtin_divide,       0 },
-	{ "mod",   minift_builtin_modulo,       0 },
-	{ "<",     minift_builtin_less_than,    0 },
-	{ ">",     minift_builtin_greater_than, 0 },
-	{ "=",     minift_builtin_equal,        0 },
-	{ "!=",    minift_builtin_not_equal,    0 },
+	{ "+",      minift_builtin_add,          0 },
+	{ "-",      minift_builtin_subtract,     0 },
+	{ "*",      minift_builtin_multiply,     0 },
+	{ "/",      minift_builtin_divide,       0 },
+	{ "mod",    minift_builtin_modulo,       0 },
+	{ "<",      minift_builtin_less_than,    0 },
+	{ ">",      minift_builtin_greater_than, 0 },
+	{ "=",      minift_builtin_equal,        0 },
+	{ "!=",     minift_builtin_not_equal,    0 },
 
-	{ "c@",    minift_builtin_char_at,      0 },
-	{ "c!",    minift_builtin_char_set,     0 },
-	{ "emit",  minift_builtin_display_char, 0 },
+	{ "c@",     minift_builtin_char_at,      0 },
+	{ "c!",     minift_builtin_char_set,     0 },
+	{ "emit",   minift_builtin_display_char, 0 },
 
-	{ "drop",  minift_builtin_drop,         0 },
-	{ "dup",   minift_builtin_dup,          0 },
-	{ "test",  minift_builtin_test,         0 },
-	{ ".",     minift_builtin_display,      0 },
-	{ "cr",    minift_builtin_newline,      0 },
+	{ "drop",   minift_builtin_drop,         0 },
+	{ "dup",    minift_builtin_dup,          0 },
+	{ "test",   minift_builtin_test,         0 },
+	{ ".",      minift_builtin_display,      0 },
+	{ "cr",     minift_builtin_newline,      0 },
 
-	{ "value", minift_builtin_value,        0 },
-	{ "to",    minift_builtin_value_set,    0 },
+	{ "value",  minift_builtin_value,        0 },
+	{ "to",     minift_builtin_value_set,    0 },
 
-	{ "exit",  minift_builtin_exit,         0 },
+	{ "cells",  minift_builtin_cells,        0 },
+	{ "create", minift_builtin_create,       0 },
+	{ "allot",  minift_builtin_allot,        0 },
+	{ "@",      minift_builtin_fetch,        0 },
+	{ "!",      minift_builtin_store,        0 },
+
+	{ "exit",  minift_builtin_exit,          0 },
 	{ "print-archives", minift_builtin_print_archives, 0 },
 };
 
@@ -333,6 +345,66 @@ bool minift_builtin_value_set( minift_vm_t *vm ){
 	}
 
 	return inc_ip;
+}
+
+bool minift_builtin_cells( minift_vm_t *vm ){
+	unsigned long cells = minift_untag( minift_pop( vm, &vm->param_stack ));
+	cells *= sizeof( unsigned long );
+	minift_push( vm, &vm->param_stack, minift_tag( cells, MINIFT_TYPE_INT ));
+
+	return true;
+}
+
+bool minift_builtin_create( minift_vm_t *vm ){
+	unsigned long word = minift_read_token( vm );
+
+	if ( minift_is_type( word, MINIFT_TYPE_WORD )){
+		minift_define_t *def = minift_make_variable( vm, word );
+		unsigned long  *dptr = vm->data_stack.ptr;
+
+		if ( !def ){
+			return false;
+		}
+
+		unsigned long *data = minift_define_data( def );
+		*data = minift_tag( (unsigned long)dptr, MINIFT_TYPE_ADDR );
+	}
+
+	return true;
+}
+
+bool minift_builtin_allot( minift_vm_t *vm ){
+	unsigned long bytes = minift_untag( minift_pop( vm, &vm->param_stack ));
+	bytes = minift_bytes_to_cells( bytes );
+
+	uint8_t *ptr = (uint8_t *)vm->data_stack.ptr + bytes;
+	vm->data_stack.ptr = (unsigned long *)ptr;
+	
+	if ( vm->data_stack.ptr >= vm->data_stack.end ){
+		minift_fatal_error( vm, "out of data stack space" );
+		return false;
+	}
+
+	return true;
+}
+
+bool minift_builtin_fetch( minift_vm_t *vm ){
+	unsigned long  temp = minift_untag( minift_pop( vm, &vm->param_stack ));
+	unsigned long *addr = (void *)temp;
+
+	minift_push( vm, &vm->param_stack, *addr );
+
+	return true;
+}
+
+bool minift_builtin_store( minift_vm_t *vm ){
+	unsigned long  temp = minift_untag( minift_pop( vm, &vm->param_stack ));
+	unsigned long value = minift_pop( vm, &vm->param_stack );
+	unsigned long *addr = (void *)temp;
+
+	*addr = value;
+
+	return true;
 }
 
 bool minift_builtin_exit( minift_vm_t *vm ){

@@ -85,6 +85,7 @@ minift_arc_ent_t *minift_archive_lookup( minift_vm_t *vm, unsigned long hash );
 
 // TODO: move these to a seperate util source file
 unsigned long minift_hash( const char *str );
+unsigned minift_bytes_to_cells( unsigned bytes );
 void minift_puts( const char *s );
 
 static inline unsigned long minift_tag( unsigned long data, unsigned tag ){

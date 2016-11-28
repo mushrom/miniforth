@@ -37,7 +37,7 @@ void minift_read_buffer( char *buf, char first ){
 	buf[i] = '\0';
 }
 
-static inline unsigned bytes_to_cells( unsigned bytes ){
+unsigned minift_bytes_to_cells( unsigned bytes ){
 	unsigned cell_size = sizeof(unsigned long);
 	unsigned mod = (bytes % cell_size);
 
@@ -79,7 +79,7 @@ unsigned long minift_read_string( minift_vm_t *vm ){
 	*ptr = '\0';
 
 	// add size of string to data stack, while keeping it aligned
-	vm->data_stack.ptr += bytes_to_cells( size );
+	vm->data_stack.ptr += minift_bytes_to_cells( size );
 
 	if ( vm->compiling ){
 		*forward_jump = (unsigned long)vm->data_stack.ptr;
