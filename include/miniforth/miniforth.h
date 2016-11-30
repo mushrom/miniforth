@@ -13,6 +13,11 @@ enum {
 };
 
 enum {
+	MINIFT_ERR_FATAL       = false,
+	MINIFT_ERR_RECOVERABLE = true,
+};
+
+enum {
 	MINIFT_MAX_WORDSIZE = 16,
 };
 
@@ -71,7 +76,7 @@ minift_vm_t *minift_init_vm( minift_vm_t *vm,
 
 void minift_step( minift_vm_t *vm );
 void minift_run( minift_vm_t *vm );
-void minift_fatal_error( minift_vm_t *vm, char *msg );
+void minift_error( minift_vm_t *vm, bool recoverable, char *msg );
 bool minift_exec_word( minift_vm_t *vm, unsigned long word );
 minift_read_ret_t minift_read_token( minift_vm_t *vm );
 void minift_compile( minift_vm_t *vm );

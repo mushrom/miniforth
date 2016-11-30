@@ -106,7 +106,8 @@ bool minift_builtin_return( minift_vm_t *vm ){
 
 bool minift_builtin_jump( minift_vm_t *vm ){
 	if ( !vm->ip ){
-		minift_fatal_error( vm, "jump call from non-compiled context" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "jump call from non-compiled context" );
 		return false;
 	}
 
@@ -118,7 +119,8 @@ bool minift_builtin_jump( minift_vm_t *vm ){
 
 bool minift_builtin_jump_false( minift_vm_t *vm ){
 	if ( !vm->ip ){
-		minift_fatal_error( vm, "jump call from non-compiled context" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "jump call from non-compiled context" );
 		return false;
 	}
 
@@ -137,7 +139,9 @@ bool minift_builtin_jump_false( minift_vm_t *vm ){
 
 bool minift_builtin_push_const( minift_vm_t *vm ){
 	if ( !vm->ip ){
-		minift_fatal_error( vm, "pushc call from non-compiled context" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "pushc call from non-compiled context" );
+
 		return false;
 	}
 
@@ -326,7 +330,8 @@ bool minift_builtin_value_set( minift_vm_t *vm ){
 	minift_define_t *def = minift_define_lookup( vm, word );
 
 	if ( !def ){
-		minift_fatal_error( vm, "value set for undefined word" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "value set for undefined word" );
 		return false;
 	}
 
@@ -367,7 +372,7 @@ bool minift_builtin_allot( minift_vm_t *vm ){
 	vm->data_stack.ptr = (unsigned long *)ptr;
 	
 	if ( vm->data_stack.ptr >= vm->data_stack.end ){
-		minift_fatal_error( vm, "out of data stack space" );
+		minift_error( vm, MINIFT_ERR_FATAL, "out of data space" );
 		return false;
 	}
 

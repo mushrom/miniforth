@@ -75,7 +75,7 @@ minift_read_ret_t minift_read_string( minift_vm_t *vm ){
 		*ptr++ = c;
 
 		if ( ptr >= end ){
-			minift_fatal_error( vm, "out of data stack" );
+			minift_error( vm, MINIFT_ERR_FATAL, "out of data stack" );
 		}
 	}
 
@@ -159,7 +159,7 @@ bool minift_exec_word( minift_vm_t *vm, unsigned long word ){
 		return ent->func( vm );
 	}
 
-	minift_fatal_error( vm, "undefined word" );
+	minift_error( vm, MINIFT_ERR_RECOVERABLE, "undefined word" );
 	return false;
 }
 
@@ -191,13 +191,18 @@ void minift_run( minift_vm_t *vm ){
 	}
 }
 
-void minift_fatal_error( minift_vm_t *vm, char *msg ){
-	vm->running = false;
+void minift_error( minift_vm_t *vm, bool recoverable, char *msg ){
+	if ( recoverable ){
+		minift_puts( "error: " );
+		vm->ip = 0;
+		vm->param_stack.ptr = vm->param_stack.start;
 
-	for ( unsigned i = 0; msg[i]; i++ ){
-		minift_put_char( msg[i] );
+	} else {
+		minift_puts( "fatal error: " );
+		vm->running = false;
 	}
 
+	minift_puts( msg );
 	minift_put_char ( '\n' );
 }
 
@@ -243,7 +248,8 @@ unsigned long minift_pop( minift_vm_t *vm, minift_stack_t *stack ){
 		return *(--stack->ptr);
 
 	} else {
-		minift_fatal_error( vm, "reached beginning of stack" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "reached beginning of stack" );
 	}
 
 	return 0;
@@ -254,7 +260,7 @@ void minift_push( minift_vm_t *vm, minift_stack_t *stack, unsigned long data ){
 		*(stack->ptr++) = data;
 
 	} else {
-		minift_fatal_error( vm, "reached end of stack" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE, "reached end of stack" );
 	}
 }
 
@@ -263,7 +269,8 @@ unsigned long minift_peek( minift_vm_t *vm, minift_stack_t *stack ){
 		return *(stack->ptr - 1);
 
 	} else {
-		minift_fatal_error( vm, "reached beginning of stack" );
+		minift_error( vm, MINIFT_ERR_RECOVERABLE,
+		              "reached beginning of stack" );
 	}
 
 	return 0;
@@ -301,7 +308,7 @@ void minift_compile( minift_vm_t *vm ){
 	minift_read_ret_t token;
 
 	if ( !def ){
-		minift_fatal_error( vm, "out of stack space" );
+		minift_error( vm, MINIFT_ERR_FATAL, "out of data space" );
 		return;
 	}
 
@@ -383,7 +390,7 @@ minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word ){
 	minift_define_t *def   = alloc_definition( vm );
 
 	if ( !def ){
-		minift_fatal_error( vm, "out of stack space" );
+		minift_error( vm, MINIFT_ERR_FATAL, "out of data space" );
 		return NULL;
 	}
 
