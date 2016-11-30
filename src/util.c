@@ -39,6 +39,12 @@ int minift_atoi( const char *s ){
 	return ret;
 }
 
+int minift_strlen( const char *s ){
+	int i;
+	for ( i = 0; s[i]; i++ );
+	return i;
+}
+
 char minift_lowercase( char c ){
 	if ( c >= 'A' && c <= 'Z' ){
 		return 'a' + (c - 'A');

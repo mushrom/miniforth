@@ -406,18 +406,30 @@ bool minift_builtin_exit( minift_vm_t *vm ){
 
 bool minift_builtin_print_archives( minift_vm_t *vm ){
 	minift_archive_t *arc = vm->archives;
+	unsigned ent_per_line = 78 / MINIFT_MAX_WORDSIZE;
 
 	for ( ; arc; arc = arc->next ){
+		minift_puts( "> " );
 		minift_puts( arc->name );
-		minift_puts( ":\n" );
+		minift_put_char( ':' );
 
 		for ( unsigned i = 0; i < arc->size; i++ ){
-			minift_arc_ent_t *ent = arc->entries + i;
+			if ( i % ent_per_line == 0 ){
+				minift_put_char( '\n' );
+				minift_puts( "  " );
+			}
 
-			minift_puts( "   " );
+			minift_arc_ent_t *ent = arc->entries + i;
+			unsigned spaces = MINIFT_MAX_WORDSIZE - minift_strlen( ent->name );
+
 			minift_puts( ent->name );
-			minift_puts( "\n" );
+
+			while ( spaces-- ){
+				minift_put_char( ' ' );
+			}
 		}
+
+		minift_put_char( '\n' );
 	}
 
 	return true;
