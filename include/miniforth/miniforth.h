@@ -10,10 +10,6 @@ enum {
 	MINIFT_TYPE_INT          = 0,
 	MINIFT_TYPE_WORD         = 1,
 	MINIFT_TYPE_ADDR         = 2,
-	MINIFT_TYPE_LITERAL_WORD = 3,
-
-	MINIFT_TYPE_SHIFT = 2,
-	MINIFT_TYPE_MASK  = (1 << MINIFT_TYPE_SHIFT) - 1,
 };
 
 enum {
@@ -24,6 +20,11 @@ typedef struct minift_stack         minift_stack_t;
 typedef struct minift_archive       minift_archive_t;
 typedef struct minift_archive_entry minift_archive_entry_t;
 typedef struct minift_vm            minift_vm_t;
+
+typedef struct minift_read_ret {
+	unsigned type;
+	unsigned long token;
+} minift_read_ret_t;
 
 typedef struct minift_stack {
 	unsigned long *start;
@@ -72,7 +73,7 @@ void minift_step( minift_vm_t *vm );
 void minift_run( minift_vm_t *vm );
 void minift_fatal_error( minift_vm_t *vm, char *msg );
 bool minift_exec_word( minift_vm_t *vm, unsigned long word );
-unsigned long minift_read_token( minift_vm_t *vm );
+minift_read_ret_t minift_read_token( minift_vm_t *vm );
 void minift_compile( minift_vm_t *vm );
 minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word );
 unsigned long *minift_define_data( minift_define_t *define );
@@ -87,22 +88,6 @@ minift_arc_ent_t *minift_archive_lookup( minift_vm_t *vm, unsigned long hash );
 unsigned long minift_hash( const char *str );
 unsigned minift_bytes_to_cells( unsigned bytes );
 void minift_puts( const char *s );
-
-static inline unsigned long minift_tag( unsigned long data, unsigned tag ){
-	return (data << MINIFT_TYPE_SHIFT) | tag;
-}
-
-static inline unsigned long minift_untag( unsigned long data ){
-	return data >> MINIFT_TYPE_SHIFT;
-}
-
-static inline unsigned long minift_get_tag( unsigned long data ){
-	return data & MINIFT_TYPE_MASK;
-}
-
-static inline bool minift_is_type( unsigned long data, unsigned tag ){
-	return (data & MINIFT_TYPE_MASK) == tag;
-}
 
 unsigned long minift_pop( minift_vm_t *vm, minift_stack_t *stack );
 void minift_push( minift_vm_t *vm, minift_stack_t *stack, unsigned long data );

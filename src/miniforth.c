@@ -2,9 +2,11 @@
 #include <miniforth/util.h>
 #include <stdint.h>
 
+/*
 static inline unsigned long make_hash( char *str ){
-	return minift_tag( minift_hash( str ), MINIFT_TYPE_WORD );
+	return minift_hash( str );
 }
+*/
 
 char minift_skip_shitespace( void ){
 	char c = 0;
@@ -44,7 +46,7 @@ unsigned minift_bytes_to_cells( unsigned bytes ){
 	return bytes - (bytes % cell_size) + (!!mod * cell_size);
 }
 
-unsigned long minift_read_string( minift_vm_t *vm ){
+minift_read_ret_t minift_read_string( minift_vm_t *vm ){
 	// XXX: when in compilation mode, both the word list and the string
 	//      will be allocated on top of the same stack, which results
 	//      in erroneous compiled word lists, so a 'jump' word is inserted
@@ -53,9 +55,10 @@ unsigned long minift_read_string( minift_vm_t *vm ){
 	//
 	// TODO: think of a better way to handle this
 	unsigned long *forward_jump = NULL;
+	minift_read_ret_t ret;
 
 	if ( vm->compiling ){
-		minift_push( vm, &vm->data_stack, make_hash( "jump" ));
+		minift_push( vm, &vm->data_stack, minift_hash( "jump" ));
 		forward_jump = vm->data_stack.ptr;
 		minift_push( vm, &vm->data_stack, 0 );
 	}
@@ -85,10 +88,15 @@ unsigned long minift_read_string( minift_vm_t *vm ){
 		*forward_jump = (unsigned long)vm->data_stack.ptr;
 	}
 
-	return minift_tag( (uintptr_t)str, MINIFT_TYPE_ADDR );
+	ret.token = (uintptr_t)str;
+	ret.type  = MINIFT_TYPE_ADDR;
+
+	return ret;
 }
 
-unsigned long minift_read_token( minift_vm_t *vm ){
+minift_read_ret_t minift_read_token( minift_vm_t *vm ){
+	minift_read_ret_t ret;
+
 	char buf[MINIFT_MAX_WORDSIZE];
 	char c = minift_skip_shitespace( );
 
@@ -98,17 +106,17 @@ unsigned long minift_read_token( minift_vm_t *vm ){
 
 	minift_read_buffer( buf, c );
 
-	unsigned long ret = 0;
+	//unsigned long ret = 0;
 
 	if ( is_number( buf[0] )){
 		// convert to number
-		ret = minift_atoi( buf );
-		ret = minift_tag( ret, MINIFT_TYPE_INT );
+		ret.token = minift_atoi( buf );
+		ret.type  = MINIFT_TYPE_INT;
 
 	} else {
 		// otherwise assume it's a word
-		ret = minift_hash( buf );
-		ret = minift_tag( ret, MINIFT_TYPE_WORD );
+		ret.token = minift_hash( buf );
+		ret.type  = MINIFT_TYPE_WORD;
 	}
 
 	return ret;
@@ -156,19 +164,22 @@ bool minift_exec_word( minift_vm_t *vm, unsigned long word ){
 }
 
 void minift_step( minift_vm_t *vm ){
-	unsigned long token = vm->ip? *vm->ip : minift_read_token( vm );
-	bool ret = false;
+	if ( vm->ip ){
+		bool ret = minift_exec_word( vm, *vm->ip );
 
-	if ( minift_is_type( token, MINIFT_TYPE_WORD )){
-		ret = minift_exec_word( vm, token );
+		if ( vm->ip ){
+			vm->ip += ret;
+		}
 
 	} else {
-		minift_push( vm, &vm->param_stack, token );
-		ret = true;
-	}
+		minift_read_ret_t token = minift_read_token( vm );
 
-	if ( vm->ip ){
-		vm->ip += ret;
+		if ( token.type == MINIFT_TYPE_WORD ){
+			minift_exec_word( vm, token.token );
+
+		} else {
+			minift_push( vm, &vm->param_stack, token.token );
+		}
 	}
 }
 
@@ -193,8 +204,7 @@ void minift_fatal_error( minift_vm_t *vm, char *msg ){
 void minift_archive_add( minift_vm_t *vm, minift_archive_t *archive ){
 	// generate hashes for each entry in the archive
 	for ( unsigned i = 0; i < archive->size; i++ ){
-		unsigned long hash = minift_hash( archive->entries[i].name );
-		archive->entries[i].hash = minift_tag( hash, MINIFT_TYPE_WORD );
+		archive->entries[i].hash = minift_hash( archive->entries[i].name );
 	}
 
 	archive->next = vm->archives;
@@ -275,105 +285,102 @@ static inline minift_define_t *alloc_definition( minift_vm_t *vm ){
 	return ret;
 }
 
+static inline bool is_word( minift_read_ret_t tok, char *word ){
+	return tok.type  == MINIFT_TYPE_WORD
+	    && tok.token == minift_hash( word );
+}
+
 void minift_compile( minift_vm_t *vm ){
-	unsigned long end_comp    = make_hash( ";" );
-	unsigned long while_word  = make_hash( "while" );
-	unsigned long begin_word  = make_hash( "begin" );
-	unsigned long repeat_word = make_hash( "repeat" );
-	unsigned long if_word     = make_hash( "if" );
-	unsigned long else_word   = make_hash( "else" );
-	unsigned long then_word   = make_hash( "then" );
-	unsigned long jump_word   = make_hash( "jump" );
-	unsigned long jump_f_word = make_hash( "jumpf" );
-	unsigned long to_word     = make_hash( "to" );
-	unsigned long word = 0;
+	unsigned long jump_word   = minift_hash( "jump" );
+	unsigned long jump_f_word = minift_hash( "jumpf" );
+	unsigned long to_word     = minift_hash( "to" );
 
 	vm->compiling = true;
 
 	minift_define_t *def = alloc_definition( vm );
+	minift_read_ret_t token;
 
 	if ( !def ){
 		minift_fatal_error( vm, "out of stack space" );
 		return;
 	}
 
-	def->hash     = minift_read_token( vm );
-	def->previous = vm->definitions;
+	token = minift_read_token( vm );
 
-	if ( !minift_is_type( def->hash, MINIFT_TYPE_WORD )){
-		minift_fatal_error( vm, "expected a word in definition" );
-		return;
-	}
-
+	def->hash       = token.token;
+	def->previous   = vm->definitions;
 	vm->definitions = def;
 
-	word = minift_read_token( vm );
+	token = minift_read_token( vm );
 
 	unsigned long *forward[8];
 	unsigned long *backward[8];
 	unsigned forward_count  = 0;
 	unsigned backward_count = 0;
 
-	while ( word != end_comp && vm->running ){
-		if ( word == if_word ){
-			minift_push( vm, &vm->data_stack, jump_f_word );
-			forward[forward_count++] = vm->data_stack.ptr;
-			minift_push( vm, &vm->data_stack, 0 );
+	while ( !is_word( token, ";" ) && vm->running ){
+		if ( token.type == MINIFT_TYPE_WORD ){
+			if ( is_word( token, "if" )){
+				minift_push( vm, &vm->data_stack, jump_f_word );
+				forward[forward_count++] = vm->data_stack.ptr;
+				minift_push( vm, &vm->data_stack, 0 );
 
-		} else if ( word == else_word ){
-			unsigned long *ref = forward[--forward_count];
+			} else if ( is_word( token, "else" )){
+				unsigned long *ref = forward[--forward_count];
 
-			minift_push( vm, &vm->data_stack, jump_word );
-			forward[forward_count++] = vm->data_stack.ptr;
-			minift_push( vm, &vm->data_stack, 0 );
+				minift_push( vm, &vm->data_stack, jump_word );
+				forward[forward_count++] = vm->data_stack.ptr;
+				minift_push( vm, &vm->data_stack, 0 );
 
-			*ref = (unsigned long)vm->data_stack.ptr;
+				*ref = (unsigned long)vm->data_stack.ptr;
 
-		} else if ( word == then_word ){
-			unsigned long *ref = forward[--forward_count];
-			*ref = (unsigned long)vm->data_stack.ptr;
+			} else if ( is_word( token, "then" )){
+				unsigned long *ref = forward[--forward_count];
+				*ref = (unsigned long)vm->data_stack.ptr;
 
-		} else if ( word == begin_word ){
-			backward[backward_count++] = vm->data_stack.ptr;
+			} else if ( is_word( token, "begin" )){
+				backward[backward_count++] = vm->data_stack.ptr;
 
-		} else if ( word == while_word ){
-			minift_push( vm, &vm->data_stack, jump_f_word );
-			forward[forward_count++] = vm->data_stack.ptr;
-			minift_push( vm, &vm->data_stack, 0 );
+			} else if ( is_word( token, "while" )){
+				minift_push( vm, &vm->data_stack, jump_f_word );
+				forward[forward_count++] = vm->data_stack.ptr;
+				minift_push( vm, &vm->data_stack, 0 );
 
-		} else if ( word == repeat_word ){
-			unsigned long *back_ref = backward[--backward_count];
-			unsigned long *for_ref  = forward[--forward_count];
+			} else if ( is_word( token, "repeat" )){
+				unsigned long *back_ref = backward[--backward_count];
+				unsigned long *for_ref  = forward[--forward_count];
 
-			minift_push( vm, &vm->data_stack, jump_word );
-			minift_push( vm, &vm->data_stack, (unsigned long)back_ref );
+				minift_push( vm, &vm->data_stack, jump_word );
+				minift_push( vm, &vm->data_stack, (unsigned long)back_ref );
 
-			*for_ref = (unsigned long)vm->data_stack.ptr;
+				*for_ref = (unsigned long)vm->data_stack.ptr;
 
-		} else if ( word == to_word ){
-			word = minift_read_token( vm );
-			word = minift_untag( word );
-			word = minift_tag( word, MINIFT_TYPE_LITERAL_WORD );
+			} else if ( is_word( token, "to" )){
+				token = minift_read_token( vm );
 
-			minift_push( vm, &vm->data_stack, to_word );
-			minift_push( vm, &vm->data_stack, word );
+				minift_push( vm, &vm->data_stack, to_word );
+				minift_push( vm, &vm->data_stack, token.token );
+
+			} else {
+				minift_push( vm, &vm->data_stack, token.token );
+			}
 
 		} else {
-			minift_push( vm, &vm->data_stack, word );
+			minift_push( vm, &vm->data_stack, minift_hash( "pushc" ));
+			minift_push( vm, &vm->data_stack, token.token );
 		}
 
-		word = minift_read_token( vm );
+		token = minift_read_token( vm );
 	}
 
 	// push remaining ";" word
-	minift_push( vm, &vm->data_stack, word );
+	minift_push( vm, &vm->data_stack, token.token );
 
 	vm->compiling = false;
 }
 
 minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word ){
 	minift_define_t *def   = alloc_definition( vm );
-	unsigned long end_comp = make_hash( ";" );
 
 	if ( !def ){
 		minift_fatal_error( vm, "out of stack space" );
@@ -383,21 +390,18 @@ minift_define_t *minift_make_variable( minift_vm_t *vm, unsigned long word ){
 	def->hash     = word;
 	def->previous = vm->definitions;
 
-	if ( !minift_is_type( def->hash, MINIFT_TYPE_WORD )){
-		minift_fatal_error( vm, "expected a word in definition" );
-		return NULL;
-	}
-
 	vm->definitions = def;
 
+	minift_push( vm, &vm->data_stack, minift_hash( "pushc" ));
 	minift_push( vm, &vm->data_stack, 0 );
-	minift_push( vm, &vm->data_stack, end_comp );
+	minift_push( vm, &vm->data_stack, minift_hash( ";" ));
 
 	return def;
 }
 
 unsigned long *minift_define_data( minift_define_t *define ){
-	return (void *)((uint8_t *)define + sizeof(minift_define_t));
+	return (void *)
+		((uint8_t *)define + sizeof(minift_define_t) + sizeof(unsigned long));
 }
 
 minift_define_t *minift_define_lookup( minift_vm_t *vm, unsigned long hash ){
