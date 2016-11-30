@@ -76,7 +76,7 @@ void minift_print_hex( unsigned long n ){
 		return;
 	}
 
-	for ( ; n; n /= 10, i++ ){
+	for ( ; n; n /= 16, i++ ){
 		buf[i] = hex_table[n % 16];
 	}
 

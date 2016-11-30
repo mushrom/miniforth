@@ -20,6 +20,7 @@ bool minift_builtin_not_equal( minift_vm_t *vm );
 bool minift_builtin_char_at( minift_vm_t *vm );
 bool minift_builtin_char_set( minift_vm_t *vm );
 bool minift_builtin_display_char( minift_vm_t *vm );
+bool minift_builtin_display_hex( minift_vm_t *vm );
 
 bool minift_builtin_test( minift_vm_t *vm );
 bool minift_builtin_drop( minift_vm_t *vm );
@@ -64,6 +65,7 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ "dup",    minift_builtin_dup,          0 },
 	{ "test",   minift_builtin_test,         0 },
 	{ ".",      minift_builtin_display,      0 },
+	{ ".x",     minift_builtin_display_hex,  0 },
 	{ "cr",     minift_builtin_newline,      0 },
 
 	{ "value",  minift_builtin_value,        0 },
@@ -270,6 +272,14 @@ bool minift_builtin_display( minift_vm_t *vm ){
 	unsigned long token = minift_peek( vm, &vm->param_stack );
 
 	minift_print_int( token );
+
+	return true;
+}
+
+bool minift_builtin_display_hex( minift_vm_t *vm ){
+	unsigned long token = minift_peek( vm, &vm->param_stack );
+
+	minift_print_hex( token );
 
 	return true;
 }
