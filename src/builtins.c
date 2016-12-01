@@ -25,6 +25,13 @@ bool minift_builtin_display_hex( minift_vm_t *vm );
 bool minift_builtin_test( minift_vm_t *vm );
 bool minift_builtin_drop( minift_vm_t *vm );
 bool minift_builtin_dup( minift_vm_t *vm );
+bool minift_builtin_swap( minift_vm_t *vm );
+bool minift_builtin_over( minift_vm_t *vm );
+bool minift_builtin_tuck( minift_vm_t *vm );
+bool minift_builtin_nip( minift_vm_t *vm );
+bool minift_builtin_twoswap( minift_vm_t *vm );
+bool minift_builtin_twoover( minift_vm_t *vm );
+
 bool minift_builtin_display( minift_vm_t *vm );
 bool minift_builtin_newline( minift_vm_t *vm );
 
@@ -61,9 +68,16 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ "c!",     minift_builtin_char_set,     0 },
 	{ "emit",   minift_builtin_display_char, 0 },
 
+	{ "test",   minift_builtin_test,         0 },
 	{ "drop",   minift_builtin_drop,         0 },
 	{ "dup",    minift_builtin_dup,          0 },
-	{ "test",   minift_builtin_test,         0 },
+	{ "swap",   minift_builtin_swap,         0 },
+	{ "over",   minift_builtin_over,         0 },
+	{ "tuck",   minift_builtin_tuck,         0 },
+	{ "nip",    minift_builtin_nip,          0 },
+	{ "swap2",  minift_builtin_twoswap,      0 },
+	{ "over2",  minift_builtin_twoover,      0 },
+
 	{ ".",      minift_builtin_display,      0 },
 	{ ".x",     minift_builtin_display_hex,  0 },
 	{ "cr",     minift_builtin_newline,      0 },
@@ -268,6 +282,78 @@ bool minift_builtin_drop( minift_vm_t *vm ){
 
 bool minift_builtin_dup( minift_vm_t *vm ){
 	minift_push( vm, &vm->param_stack, minift_peek( vm, &vm->param_stack ));
+
+	return true;
+}
+
+bool minift_builtin_swap( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, a );
+	minift_push( vm, &vm->param_stack, b );
+
+	return true;
+}
+
+bool minift_builtin_over( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, b );
+	minift_push( vm, &vm->param_stack, a );
+	minift_push( vm, &vm->param_stack, b );
+
+	return true;
+}
+
+bool minift_builtin_tuck( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, a );
+	minift_push( vm, &vm->param_stack, b );
+	minift_push( vm, &vm->param_stack, a );
+
+	return true;
+}
+
+bool minift_builtin_nip( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, a );
+
+	return true;
+}
+
+bool minift_builtin_twoswap( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+	unsigned long c = minift_pop( vm, &vm->param_stack );
+	unsigned long d = minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, b );
+	minift_push( vm, &vm->param_stack, a );
+
+	minift_push( vm, &vm->param_stack, d );
+	minift_push( vm, &vm->param_stack, c );
+
+	return true;
+}
+
+bool minift_builtin_twoover( minift_vm_t *vm ){
+	unsigned long a = minift_pop( vm, &vm->param_stack );
+	unsigned long b = minift_pop( vm, &vm->param_stack );
+	unsigned long c = minift_pop( vm, &vm->param_stack );
+	unsigned long d = minift_pop( vm, &vm->param_stack );
+
+	minift_push( vm, &vm->param_stack, d );
+	minift_push( vm, &vm->param_stack, c );
+	minift_push( vm, &vm->param_stack, b );
+	minift_push( vm, &vm->param_stack, a );
+	minift_push( vm, &vm->param_stack, d );
+	minift_push( vm, &vm->param_stack, c );
 
 	return true;
 }
