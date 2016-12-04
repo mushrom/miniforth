@@ -46,6 +46,7 @@ bool minift_builtin_store( minift_vm_t *vm );
 
 bool minift_builtin_exit( minift_vm_t *vm );
 bool minift_builtin_print_archives( minift_vm_t *vm );
+bool minift_builtin_meminfo( minift_vm_t *vm );
 
 static minift_archive_entry_t minift_builtins[] = {
 	{ ":",      minift_builtin_compile,      0 },
@@ -91,8 +92,9 @@ static minift_archive_entry_t minift_builtins[] = {
 	{ "@",      minift_builtin_fetch,        0 },
 	{ "!",      minift_builtin_store,        0 },
 
-	{ "exit",  minift_builtin_exit,          0 },
+	{ "exit",   minift_builtin_exit,         0 },
 	{ "print-archives", minift_builtin_print_archives, 0 },
+	{ "push-meminfo",   minift_builtin_meminfo,        0 },
 };
 
 void minift_archive_init_base( minift_vm_t *vm ){
@@ -517,6 +519,25 @@ bool minift_builtin_print_archives( minift_vm_t *vm ){
 
 		minift_put_char( '\n' );
 	}
+
+	return true;
+}
+
+bool minift_builtin_meminfo( minift_vm_t *vm ){
+	uintptr_t data_len  = (uintptr_t)vm->data_stack.end
+	                    - (uintptr_t)vm->data_stack.ptr;
+	uintptr_t param_len = (uintptr_t)vm->param_stack.end
+	                    - (uintptr_t)vm->param_stack.ptr;
+	uintptr_t call_len  = (uintptr_t)vm->call_stack.end
+	                    - (uintptr_t)vm->call_stack.ptr;
+
+	data_len  /= sizeof( unsigned long );
+	param_len /= sizeof( unsigned long );
+	call_len  /= sizeof( unsigned long );
+
+	minift_push( vm, &vm->param_stack, data_len );
+	minift_push( vm, &vm->param_stack, param_len );
+	minift_push( vm, &vm->param_stack, call_len );
 
 	return true;
 }
