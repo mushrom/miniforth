@@ -328,6 +328,9 @@ void minift_compile( minift_vm_t *vm ){
 	while ( !is_word( token, ";" ) && vm->running ){
 		if ( token.type == MINIFT_TYPE_WORD ){
 			if ( is_word( token, "if" )){
+				// `if` is just ignored
+
+			} else if ( is_word( token, "then" )){
 				minift_push( vm, &vm->data_stack, jump_f_word );
 				forward[forward_count++] = vm->data_stack.ptr;
 				minift_push( vm, &vm->data_stack, 0 );
@@ -341,14 +344,14 @@ void minift_compile( minift_vm_t *vm ){
 
 				*ref = (unsigned long)vm->data_stack.ptr;
 
-			} else if ( is_word( token, "then" )){
+			} else if ( is_word( token, "end" )){
 				unsigned long *ref = forward[--forward_count];
 				*ref = (unsigned long)vm->data_stack.ptr;
 
-			} else if ( is_word( token, "begin" )){
+			} else if ( is_word( token, "while" )){
 				backward[backward_count++] = vm->data_stack.ptr;
 
-			} else if ( is_word( token, "while" )){
+			} else if ( is_word( token, "begin" )){
 				minift_push( vm, &vm->data_stack, jump_f_word );
 				forward[forward_count++] = vm->data_stack.ptr;
 				minift_push( vm, &vm->data_stack, 0 );
