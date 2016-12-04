@@ -106,12 +106,10 @@ minift_read_ret_t minift_read_token( minift_vm_t *vm ){
 
 	minift_read_buffer( buf, c );
 
-	//unsigned long ret = 0;
-
 	if ( is_number( buf[0] )){
 		// convert to number
-		ret.token = minift_atoi( buf );
 		ret.type  = MINIFT_TYPE_INT;
+		ret.token = (buf[1] == 'x')? minift_hextoi(buf + 2) : minift_atoi(buf);
 
 	} else {
 		// otherwise assume it's a word
