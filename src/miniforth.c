@@ -16,10 +16,10 @@ char minift_skip_shitespace( void ){
 	in_comment = c == '(';
 
 	while ( is_whitespace(c) || in_comment ){
-		if ( c == '(' ) in_comment = true;
-		if ( c == ')' ) in_comment = false;
-
 		c = minift_get_char( );
+
+		if ( c == '(' ){ in_comment = true; }
+		if ( c == ')' ){ in_comment = false; c = minift_get_char(); }
 	}
 
 	return c;
