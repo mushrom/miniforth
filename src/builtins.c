@@ -454,10 +454,8 @@ bool minift_builtin_create( minift_vm_t *vm ){
 
 bool minift_builtin_allot( minift_vm_t *vm ){
 	unsigned long bytes = minift_pop( vm, &vm->param_stack );
-	bytes = minift_bytes_to_cells( bytes );
 
-	uint8_t *ptr = (uint8_t *)vm->data_stack.ptr + bytes;
-	vm->data_stack.ptr = (unsigned long *)ptr;
+	vm->data_stack.ptr += minift_bytes_to_cells( bytes );
 	
 	if ( vm->data_stack.ptr >= vm->data_stack.end ){
 		minift_error( vm, MINIFT_ERR_FATAL, "out of data space" );

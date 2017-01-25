@@ -43,7 +43,7 @@ unsigned minift_bytes_to_cells( unsigned bytes ){
 	unsigned cell_size = sizeof(unsigned long);
 	unsigned mod = (bytes % cell_size);
 
-	return bytes - (bytes % cell_size) + (!!mod * cell_size);
+	return (bytes - mod + (!!mod * cell_size)) / cell_size;
 }
 
 minift_read_ret_t minift_read_string( minift_vm_t *vm ){
