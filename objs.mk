@@ -3,7 +3,7 @@
 minift-src = $(wildcard $(LIBRARY_ROOT)/miniforth/src/*.c)
 minift-obj = $(minift-src:.c=.o)
 
-$(BUILD)/libs/miniforth.a: $(minift-obj)
+$(BUILD)/lib/miniforth.a: $(minift-obj)
 	ar rvs $@ $^
 
 .PHONY: minift-clean
